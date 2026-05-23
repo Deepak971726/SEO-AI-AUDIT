@@ -1,6 +1,16 @@
 import { motion } from 'framer-motion'
 
-export default function AnalyzerSection({ device, setDevice, isAnalyzing, progress }) {
+const STEPS = ['Audit engine', 'SEO scan', 'Core Vitals']
+
+export default function AnalyzerSection({ device, setDevice, isAnalyzing, progress, error }) {
+  const stepStatus = (i) => {
+    if (error) return 'Failed'
+    if (!isAnalyzing && progress === 0) return 'Idle state'
+    if (progress === 100) return 'Complete'
+    if (progress > i * 30) return 'Inspecting'
+    return 'Queued'
+  }
+
   return (
     <motion.section
       id="reports"
@@ -35,26 +45,35 @@ export default function AnalyzerSection({ device, setDevice, isAnalyzing, progre
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-[0.24em] text-muted">Analysis progress</p>
-            <p className="mt-2 text-lg font-semibold text-(--text)">{isAnalyzing ? 'Running AI checks...' : 'Ready for the next report'}</p>
+            <p className="mt-2 text-lg font-semibold text-(--text)">
+              {error
+                ? 'Analysis failed — check the URL and try again'
+                : isAnalyzing
+                ? 'Running AI checks...'
+                : progress === 100
+                ? 'Analysis complete'
+                : 'Ready for the next report'}
+            </p>
           </div>
-          <div className="rounded-full bg-(--surface) px-4 py-2 text-sm text-(--text)">
-            {isAnalyzing ? `${progress}%` : 'Idle'}
+          <div className={`rounded-full px-4 py-2 text-sm ${error ? 'bg-red-500/10 text-red-400' : 'bg-(--surface) text-(--text)'}`}>
+            {error ? 'Error' : isAnalyzing ? `${progress}%` : progress === 100 ? '100%' : 'Idle'}
           </div>
         </div>
+
         <div className="mt-6 h-4 overflow-hidden rounded-full bg-(--panel)">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
+            animate={{ width: error ? '0%' : `${progress}%` }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="h-full rounded-full bg-linear-to-r from-violet-500 via-cyan-400 to-sky-500"
+            className={`h-full rounded-full ${error ? 'bg-red-500' : 'bg-linear-to-r from-violet-500 via-cyan-400 to-sky-500'}`}
           />
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {['Audit engine', 'SEO scan', 'Core Vitals'].map(label => (
+          {STEPS.map((label, i) => (
             <div key={label} className="rounded-3xl bg-(--surface) p-4 text-sm text-(--text)">
               <p className="font-medium text-(--text)">{label}</p>
-              <p className="mt-2 text-xs text-muted">{isAnalyzing ? 'Inspecting' : 'Idle state'}</p>
+              <p className={`mt-2 text-xs ${error ? 'text-red-400' : 'text-muted'}`}>{stepStatus(i)}</p>
             </div>
           ))}
         </div>

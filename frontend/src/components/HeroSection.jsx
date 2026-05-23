@@ -1,6 +1,26 @@
 import { motion } from 'framer-motion'
 
-export default function HeroSection({ url, setUrl, onAnalyze }) {
+export default function HeroSection({ url, setUrl, onAnalyze, isAnalyzing, hasResult, error }) {
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !isAnalyzing) onAnalyze()
+  }
+
+  const statusLabel = isAnalyzing
+    ? 'Analyzing...'
+    : hasResult
+    ? 'Analysis complete ✓'
+    : error
+    ? 'Analysis failed'
+    : 'Ready to analyze'
+
+  const statusColor = isAnalyzing
+    ? 'text-cyan-300'
+    : hasResult
+    ? 'text-emerald-300'
+    : error
+    ? 'text-red-400'
+    : 'text-(--text)'
+
   return (
     <section id="dashboard" className="relative overflow-hidden rounded-4xl panel-card p-8 shadow-2xl shadow-slate-950/40 backdrop-blur-2xl sm:p-12">
       <div className="hero-blur absolute inset-0 opacity-30" />
@@ -29,16 +49,32 @@ export default function HeroSection({ url, setUrl, onAnalyze }) {
               <input
                 value={url}
                 onChange={e => setUrl(e.target.value)}
-                placeholder="https://example.com"
-                className="w-full rounded-3xl border border-(--border) bg-(--surface) px-5 py-4 text-sm text-(--text) outline-none transition focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/20"
+                onKeyDown={handleKeyDown}
+                placeholder="google.com or https://example.com"
+                disabled={isAnalyzing}
+                className="w-full rounded-3xl border border-(--border) bg-(--surface) px-5 py-4 text-sm text-(--text) outline-none transition focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/20 disabled:opacity-50"
               />
               <button
                 onClick={onAnalyze}
-                className="inline-flex shrink-0 items-center justify-center rounded-3xl bg-linear-to-r from-violet-500 to-cyan-400 px-6 py-4 text-sm font-semibold text-slate-950 transition hover:scale-[1.02]"
+                disabled={isAnalyzing || !url.trim()}
+                className="inline-flex shrink-0 items-center justify-center rounded-3xl bg-linear-to-r from-violet-500 to-cyan-400 px-6 py-4 text-sm font-semibold text-slate-950 transition hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                Analyze now
+                {isAnalyzing ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    Analyzing...
+                  </span>
+                ) : 'Analyze now'}
               </button>
             </div>
+            {error && (
+              <p className="mt-3 rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-400 border border-red-500/20">
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="rounded-[1.75rem] panel-soft p-6 text-primary shadow-[0_0_60px_rgba(15,23,42,0.22)] backdrop-blur-xl">
@@ -46,15 +82,19 @@ export default function HeroSection({ url, setUrl, onAnalyze }) {
             <div className="mt-4 space-y-4">
               <div className="flex items-center justify-between rounded-3xl bg-(--panel) px-5 py-4">
                 <span className="text-sm text-(--text)">Active requests</span>
-                <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-200">24%</span>
+                <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-200">
+                  {isAnalyzing ? 'Running' : '—'}
+                </span>
               </div>
               <div className="flex items-center justify-between rounded-3xl bg-(--panel) px-5 py-4">
                 <span className="text-sm text-primary">AI suggestions</span>
-                <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs text-violet-200">Instant</span>
+                <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs text-violet-200">
+                  {hasResult ? 'Ready' : 'Pending'}
+                </span>
               </div>
               <div className="rounded-3xl panel-card p-4">
                 <p className="text-sm uppercase tracking-[0.24em] text-muted">Status</p>
-                <p className="mt-3 text-2xl font-semibold text-(--text)">Ready to analyze</p>
+                <p className={`mt-3 text-2xl font-semibold ${statusColor}`}>{statusLabel}</p>
               </div>
             </div>
           </div>

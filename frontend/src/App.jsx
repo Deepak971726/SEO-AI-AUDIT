@@ -1,5 +1,3 @@
- 
-
 import { useEffect, useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import HeroSection from './components/HeroSection.jsx'
@@ -10,42 +8,82 @@ import PerformanceChart from './components/PerformanceChart.jsx'
 import AIInsightsPanel from './components/AIInsightsPanel.jsx'
 import FeaturesSection from './components/FeaturesSection.jsx'
 import Footer from './components/Footer.jsx'
+import { analyzeUrl } from './api/analyzeApi.js'
 
 function App() {
   const [darkMode, setDarkMode] = useState(true)
-  const [url, setUrl] = useState('https://example.com')
+  const [url, setUrl] = useState('')
   const [device, setDevice] = useState('Mobile')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [report, setReport] = useState(null)
+  const [aiSuggestions, setAiSuggestions] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
 
+  // Fake progress bar that runs while waiting for the real API response
   useEffect(() => {
     let interval
     if (isAnalyzing) {
       setProgress(6)
       interval = setInterval(() => {
         setProgress(prev => {
-          const next = Math.min(prev + Math.floor(Math.random() * 12 + 8), 100)
-          if (next >= 100) {
-            clearInterval(interval)
-            setTimeout(() => setIsAnalyzing(false), 900)
-          }
-          return next
+          // Slow down near 90 so it never hits 100 before the API responds
+          if (prev >= 88) return prev
+          return Math.min(prev + Math.floor(Math.random() * 10 + 5), 88)
         })
-      }, 360)
-    } else {
-      setProgress(prev => (prev >= 100 ? 100 : prev))
+      }, 400)
     }
     return () => clearInterval(interval)
   }, [isAnalyzing])
 
-  const handleAnalyze = () => {
-    if (!url) return
+  // Auto-fix URL: add https:// if user typed bare domain like google.com
+  const normalizeUrl = (raw) => {
+    const trimmed = raw.trim()
+    if (!trimmed) return trimmed
+    if (!/^https?:\/\//i.test(trimmed)) return `https://${trimmed}`
+    return trimmed
+  }
+
+  const handleAnalyze = async () => {
+    const normalized = normalizeUrl(url)
+    if (!normalized) return
+
+    // Update input to show the fixed URL
+    setUrl(normalized)
     setIsAnalyzing(true)
     setProgress(0)
+    setError(null)
+    setReport(null)
+    setAiSuggestions(null)
+
+    try {
+      const data = await analyzeUrl(normalized)
+      setReport(data.report)
+      setAiSuggestions(data.ai_suggestions)
+      setProgress(100)
+    } catch (err) {
+      // Handle pydantic 422 validation errors
+      const detail = err.response?.data?.detail
+      let message
+      if (Array.isArray(detail)) {
+        // Pydantic returns array of {msg, loc} objects
+        message = detail.map(d => d.msg).join(', ')
+      } else {
+        message =
+          detail ||
+          err.response?.data?.error ||
+          err.message ||
+          'Something went wrong. Please try again.'
+      }
+      setError(message)
+      setProgress(0)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   return (
@@ -53,14 +91,31 @@ function App() {
       <Navbar onAnalyze={handleAnalyze} darkMode={darkMode} toggleTheme={() => setDarkMode(prev => !prev)} />
       <main className="mx-auto w-full max-w-[1800px] px-6 py-8 sm:px-8 lg:px-10 xl:px-14">
         <div className="space-y-8">
-          <HeroSection url={url} setUrl={setUrl} onAnalyze={handleAnalyze} />
-          <AnalyzerSection url={url} device={device} setDevice={setDevice} isAnalyzing={isAnalyzing} progress={progress} />
-          <MetricsDashboard />
+          <HeroSection
+            url={url}
+            setUrl={setUrl}
+            onAnalyze={handleAnalyze}
+            isAnalyzing={isAnalyzing}
+            hasResult={!!report}
+            error={error}
+          />
+          <AnalyzerSection
+            url={url}
+            device={device}
+            setDevice={setDevice}
+            isAnalyzing={isAnalyzing}
+            progress={progress}
+            error={error}
+          />
+          <MetricsDashboard report={report} />
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <AIInsightsPanel />
+            <AIInsightsPanel aiSuggestions={aiSuggestions} />
             <div className="space-y-6">
-              <PerformanceScore score={Math.max(72, 100 - Math.floor(progress / 2))} />
-              <PerformanceChart />
+              <PerformanceScore
+                score={report?.performance_score ?? null}
+                grade={report?.performance_grade ?? null}
+              />
+              <PerformanceChart report={report} />
             </div>
           </div>
           <FeaturesSection />
