@@ -9,21 +9,20 @@ const features = [
 
 export default function FeaturesSection() {
   return (
-    <section id="pricing" className="rounded-4xl panel-card p-8 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl">
+    <section id="pricing" className="panel-card p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.28em] text-cyan-300/80">Feature set</p>
-          <h2 className="mt-3 text-3xl font-semibold text-(--text)">Built for developer-first performance teams</h2>
+          <p className="eyebrow">Feature Set</p>
+          <h2 className="mt-3 text-2xl font-semibold text-(--text) sm:text-3xl">Built for developer-first performance teams</h2>
         </div>
-        <div className="rounded-full bg-(--surface) px-4 py-2 text-sm text-(--text)">Trusted by teams</div>
+        <div className="rounded-full border border-(--border) bg-(--panel) px-4 py-2 text-sm font-medium text-muted">Trusted by teams</div>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {features.map(feature => (
-          <div key={feature} className="rounded-[1.75rem] border border-(--border) bg-(--surface) px-5 py-6 text-sm text-(--text) transition hover:border-cyan-400/30 hover:bg-(--surface-strong)">
-            <p className="mb-4 text-3xl">✨</p>
+          <div key={feature} className="rounded-lg border border-(--border) bg-(--panel) px-5 py-5 text-sm transition hover:border-(--border-strong) hover:bg-(--surface-strong)">
             <p className="font-semibold text-(--text)">{feature}</p>
-            <p className="mt-3 text-sm text-muted">Designed to reduce load time, boost SEO, and simplify performance planning.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Reduce load time, improve SEO, and simplify performance planning.</p>
           </div>
         ))}
       </div>

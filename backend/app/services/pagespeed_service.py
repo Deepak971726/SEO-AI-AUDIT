@@ -25,22 +25,25 @@ def _build_session() -> requests.Session:
     return session
 
 
-def _call_pagespeed(url: str) -> dict:
+def _call_pagespeed(url: str, strategy: str) -> dict:
     """Synchronous requests call — runs in a thread executor to avoid blocking FastAPI."""
     logger.info("[PAGESPEED] Stage 1: Building API request...")
     API_KEY = settings.google_pagespeed_api_key
-    endpoint = (
-        f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-        f"?url={url}&strategy=mobile&key={API_KEY}"
-    )
-    logger.debug(f"[PAGESPEED] Endpoint: {endpoint.split('&key=')[0]}&key=***")
+    endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+    params = {
+        "url": url,
+        "strategy": strategy,
+        "key": API_KEY,
+        "category": ["performance", "accessibility", "best-practices", "seo"],
+    }
+    logger.debug(f"[PAGESPEED] Endpoint: {endpoint}?url={url}&strategy={strategy}&key=***")
 
-    logger.info(f"[PAGESPEED] Stage 2: Making request to Google PageSpeed API for: {url}")
+    logger.info(f"[PAGESPEED] Stage 2: Making {strategy} request to Google PageSpeed API for: {url}")
     session = _build_session()
 
     try:
         logger.debug(f"[PAGESPEED] Request timeout: connect=10s, read={settings.pagespeed_timeout}s")
-        response = session.get(endpoint, timeout=(10, settings.pagespeed_timeout))
+        response = session.get(endpoint, params=params, timeout=(10, settings.pagespeed_timeout))
         logger.debug(f"[PAGESPEED] Response status code: {response.status_code}")
         response.raise_for_status()
         logger.info("[PAGESPEED] ✅ API request successful")
@@ -63,20 +66,25 @@ def _call_pagespeed(url: str) -> dict:
     return result
 
 
-async def fetch_pagespeed_metrics(url: str) -> dict:
+async def fetch_pagespeed_metrics(url: str, strategy: str = "mobile") -> dict:
     """Fetch Core Web Vitals from Google PageSpeed Insights API."""
+    strategy = (strategy or "mobile").lower()
+    if strategy not in {"mobile", "desktop"}:
+        strategy = "mobile"
+
     logger.info("=" * 80)
     logger.info("[PAGESPEED API] 🔷 Starting PageSpeed Insights fetch")
     logger.info(f"[PAGESPEED API] URL: {url}")
+    logger.info(f"[PAGESPEED API] Strategy: {strategy}")
     logger.info("=" * 80)
 
     try:
         loop = asyncio.get_event_loop()
         logger.debug("[PAGESPEED API] Executing API call in thread pool...")
-        data = await loop.run_in_executor(None, partial(_call_pagespeed, url))
+        data = await loop.run_in_executor(None, partial(_call_pagespeed, url, strategy))
         logger.info("[PAGESPEED API] ✅ API call completed, parsing metrics...")
         
-        metrics = _parse_metrics(data)
+        metrics = _parse_metrics(data, strategy)
         logger.info("[PAGESPEED API] ✅ Metrics parsed successfully")
         logger.info("=" * 80)
         return metrics
@@ -86,7 +94,7 @@ async def fetch_pagespeed_metrics(url: str) -> dict:
         raise
 
 
-def _parse_metrics(data: dict) -> dict:
+def _parse_metrics(data: dict, strategy: str) -> dict:
     """Extract and format relevant metrics from the raw PageSpeed API response."""
     logger.debug("[PARSE METRICS] Extracting lighthouse data...")
     audits = data.get("lighthouseResult", {}).get("audits", {})
@@ -100,10 +108,13 @@ def _parse_metrics(data: dict) -> dict:
             logger.debug(f"[PARSE METRICS]   {key}: {value}")
         return value
 
+    def get_category_score(key: str) -> int:
+        score = categories.get(key, {}).get("score", 0)
+        return int((score or 0) * 100)
+
     logger.debug("[PARSE METRICS] Extracting core metrics...")
-    raw_score = categories.get("performance", {}).get("score", 0)
-    performance_score = int((raw_score or 0) * 100)
-    logger.debug(f"[PARSE METRICS] Raw performance score: {raw_score} → {performance_score}")
+    performance_score = get_category_score("performance")
+    logger.debug(f"[PARSE METRICS] Raw performance score → {performance_score}")
 
     lcp = get_numeric("largest-contentful-paint")
     cls = get_numeric("cumulative-layout-shift")
@@ -111,7 +122,12 @@ def _parse_metrics(data: dict) -> dict:
     speed_index = get_numeric("speed-index")
     tbt = get_numeric("total-blocking-time")
 
+    # Screenshot — stored as base64 data URI inside the audit
+    screenshot_data = audits.get("final-screenshot", {}).get("details", {}).get("data") or \
+                      audits.get("screenshot-thumbnails", {}).get("details", {}).get("items", [{}])[-1].get("data")
+
     metrics = {
+        "device": strategy,
         "lcp": format_metric(lcp, unit="s"),
         "cls": format_cls(cls),
         "fcp": format_metric(fcp, unit="s"),
@@ -119,14 +135,22 @@ def _parse_metrics(data: dict) -> dict:
         "tbt": format_metric(tbt),
         "performance_score": performance_score,
         "performance_grade": get_performance_grade(performance_score),
+        "accessibility_score": get_category_score("accessibility"),
+        "best_practices_score": get_category_score("best-practices"),
+        "seo_score": get_category_score("seo"),
+        "screenshot": screenshot_data,
     }
 
     logger.info(f"[PARSE METRICS] ✅ Metrics parsed successfully:")
     logger.info(f"[PARSE METRICS]   - Performance Score: {performance_score} ({metrics['performance_grade']})")
+    logger.info(f"[PARSE METRICS]   - Accessibility: {metrics['accessibility_score']}")
+    logger.info(f"[PARSE METRICS]   - Best Practices: {metrics['best_practices_score']}")
+    logger.info(f"[PARSE METRICS]   - SEO: {metrics['seo_score']}")
     logger.info(f"[PARSE METRICS]   - LCP: {metrics['lcp']}")
     logger.info(f"[PARSE METRICS]   - CLS: {metrics['cls']}")
     logger.info(f"[PARSE METRICS]   - FCP: {metrics['fcp']}")
     logger.info(f"[PARSE METRICS]   - Speed Index: {metrics['speed_index']}")
     logger.info(f"[PARSE METRICS]   - TBT: {metrics['tbt']}")
-    
+    logger.info(f"[PARSE METRICS]   - Screenshot: {'✅ captured' if screenshot_data else '❌ not available'}")
+
     return metrics

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import HeroSection from './components/HeroSection.jsx'
 import AnalyzerSection from './components/AnalyzerSection.jsx'
+import LighthouseDashboard from './components/LighthouseDashboard.jsx'
 import MetricsDashboard from './components/MetricsDashboard.jsx'
 import PerformanceScore from './components/PerformanceScore.jsx'
 import PerformanceChart from './components/PerformanceChart.jsx'
@@ -11,7 +12,10 @@ import Footer from './components/Footer.jsx'
 import { analyzeUrl } from './api/analyzeApi.js'
 
 function App() {
-  const [darkMode, setDarkMode] = useState(true)
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('theme') === 'dark'
+  })
   const [url, setUrl] = useState('')
   const [device, setDevice] = useState('Mobile')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -22,6 +26,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
+    window.localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
 
   // Fake progress bar that runs while waiting for the real API response
@@ -48,7 +53,8 @@ function App() {
     return trimmed
   }
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (selectedDevice = device) => {
+    const activeDevice = typeof selectedDevice === 'string' ? selectedDevice : device
     const normalized = normalizeUrl(url)
     if (!normalized) return
 
@@ -61,7 +67,7 @@ function App() {
     setAiSuggestions(null)
 
     try {
-      const data = await analyzeUrl(normalized)
+      const data = await analyzeUrl(normalized, activeDevice)
       setReport(data.report)
       setAiSuggestions(data.ai_suggestions)
       setProgress(100)
@@ -86,11 +92,17 @@ function App() {
     }
   }
 
+  const handleDeviceChange = (selectedDevice) => {
+    setDevice(selectedDevice)
+    if (isAnalyzing || !url.trim() || !report) return
+    handleAnalyze(selectedDevice)
+  }
+
   return (
     <div className={`${darkMode ? 'dark' : ''} min-h-screen bg-(--page-bg) text-(--text)`}>
       <Navbar onAnalyze={handleAnalyze} darkMode={darkMode} toggleTheme={() => setDarkMode(prev => !prev)} />
-      <main className="mx-auto w-full max-w-[1800px] px-6 py-8 sm:px-8 lg:px-10 xl:px-14">
-        <div className="space-y-8">
+      <main className="mx-auto w-full max-w-[1320px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="space-y-5">
           <HeroSection
             url={url}
             setUrl={setUrl}
@@ -102,11 +114,12 @@ function App() {
           <AnalyzerSection
             url={url}
             device={device}
-            setDevice={setDevice}
+            setDevice={handleDeviceChange}
             isAnalyzing={isAnalyzing}
             progress={progress}
             error={error}
           />
+          <LighthouseDashboard report={report} analyzedUrl={report ? url : null} />
           <MetricsDashboard report={report} />
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <AIInsightsPanel aiSuggestions={aiSuggestions} />

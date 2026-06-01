@@ -5,35 +5,35 @@ const STEPS = ['Audit engine', 'SEO scan', 'Core Vitals']
 export default function AnalyzerSection({ device, setDevice, isAnalyzing, progress, error }) {
   const stepStatus = (i) => {
     if (error) return 'Failed'
-    if (!isAnalyzing && progress === 0) return 'Idle state'
+    if (!isAnalyzing && progress === 0) return 'Idle'
     if (progress === 100) return 'Complete'
     if (progress > i * 30) return 'Inspecting'
     return 'Queued'
   }
 
   return (
-    <motion.section
-      id="reports"
-      initial={{ opacity: 0, y: 32 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: 'easeOut' }}
-      className="rounded-4xl panel-card p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl"
-    >
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <section id="reports" className="panel-card p-5 sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-cyan-300/80">Analyzer panel</p>
-          <h2 className="mt-3 text-3xl font-semibold text-(--text)">Performance audit workflow</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            Use the AI analyzer to compare mobile and desktop performance, monitor progress, and get instant optimization suggestions.
+          <p className="eyebrow">Analyzer Panel</p>
+          <h2 className="mt-2 section-title">Performance audit workflow</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Compare mobile and desktop performance, monitor progress, and get optimization suggestions.
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:w-130">
+        <div className="grid gap-1 rounded-lg border border-(--border) bg-(--panel) p-1 sm:grid-cols-2">
           {['Mobile', 'Desktop'].map(option => (
             <button
               key={option}
+              type="button"
+              disabled={isAnalyzing}
               onClick={() => setDevice(option)}
-              className={`rounded-3xl border px-4 py-3 text-sm font-medium transition ${device === option ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-100 shadow-[0_10px_30px_-18px_rgba(56,189,248,0.85)]' : 'border-(--border) bg-(--surface) text-(--text) hover:border-cyan-400/30 hover:bg-(--panel)'}`}
+              className={`h-10 rounded-md px-4 text-sm font-bold transition ${
+                device === option
+                  ? 'bg-(--surface) text-(--accent-text) shadow-[0_8px_20px_-18px_rgba(15,23,42,0.5)]'
+                  : 'text-muted hover:bg-(--surface-strong) hover:text-(--text)'
+              } disabled:opacity-60`}
             >
               {option}
             </button>
@@ -41,43 +41,45 @@ export default function AnalyzerSection({ device, setDevice, isAnalyzing, progre
         </div>
       </div>
 
-      <div className="mt-8 rounded-[1.75rem] panel-soft p-6 shadow-inner shadow-slate-950/10 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-4">
+      <div className="mt-5 border-t border-(--border) pt-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-muted">Analysis progress</p>
-            <p className="mt-2 text-lg font-semibold text-(--text)">
+            <p className="eyebrow">Analysis Progress</p>
+            <p className="mt-2 text-base font-bold text-(--text)">
               {error
-                ? 'Analysis failed — check the URL and try again'
+                ? 'Analysis failed - check the URL and try again'
                 : isAnalyzing
-                ? 'Running AI checks...'
+                ? `Running ${device.toLowerCase()} checks`
                 : progress === 100
-                ? 'Analysis complete'
+                ? `${device} analysis complete`
                 : 'Ready for the next report'}
             </p>
           </div>
-          <div className={`rounded-full px-4 py-2 text-sm ${error ? 'bg-red-500/10 text-red-400' : 'bg-(--surface) text-(--text)'}`}>
+          <div className={`w-fit rounded-full px-3 py-1 text-sm font-bold ${
+            error ? 'bg-red-50 text-(--danger) dark:bg-red-500/10' : 'status-pill'
+          }`}>
             {error ? 'Error' : isAnalyzing ? `${progress}%` : progress === 100 ? '100%' : 'Idle'}
           </div>
         </div>
 
-        <div className="mt-6 h-4 overflow-hidden rounded-full bg-(--panel)">
+        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-(--panel-strong)">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: error ? '0%' : `${progress}%` }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className={`h-full rounded-full ${error ? 'bg-red-500' : 'bg-linear-to-r from-violet-500 via-cyan-400 to-sky-500'}`}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+            className={`h-full rounded-full ${error ? 'bg-red-600' : 'bg-(--accent)'}`}
           />
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
           {STEPS.map((label, i) => (
-            <div key={label} className="rounded-3xl bg-(--surface) p-4 text-sm text-(--text)">
-              <p className="font-medium text-(--text)">{label}</p>
-              <p className={`mt-2 text-xs ${error ? 'text-red-400' : 'text-muted'}`}>{stepStatus(i)}</p>
+            <div key={label} className="rounded-lg border border-(--border) bg-(--panel) p-4 text-sm">
+              <p className="font-bold text-(--text)">{label}</p>
+              <p className={`mt-2 text-xs font-semibold ${error ? 'text-(--danger)' : 'text-muted'}`}>{stepStatus(i)}</p>
             </div>
           ))}
         </div>
       </div>
-    </motion.section>
+    </section>
   )
 }

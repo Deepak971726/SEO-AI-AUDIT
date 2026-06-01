@@ -19,12 +19,13 @@ async def analyze_url(request: AnalyzeRequest):
     logger.info("=" * 80)
     logger.info(f"[API] 🔵 NEW ANALYSIS REQUEST")
     logger.info(f"[API] URL: {request.url}")
+    logger.info(f"[API] Device: {request.device}")
     logger.info("=" * 80)
 
     # Step 1: Fetch PageSpeed metrics
     logger.info("[API] Step 1/2: Fetching PageSpeed metrics...")
     try:
-        metrics = await fetch_pagespeed_metrics(request.url)
+        metrics = await fetch_pagespeed_metrics(request.url, request.device)
         logger.info(f"[API] ✅ PageSpeed metrics fetched successfully")
         logger.debug(f"[API] Metrics: Score={metrics.get('performance_score')}, LCP={metrics.get('lcp')}, CLS={metrics.get('cls')}")
     except requests.exceptions.HTTPError as e:

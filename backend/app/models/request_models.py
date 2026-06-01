@@ -4,6 +4,7 @@ from typing import Optional
 
 class AnalyzeRequest(BaseModel):
     url: str
+    device: str = "mobile"
 
     @field_validator("url")
     @classmethod
@@ -16,8 +17,17 @@ class AnalyzeRequest(BaseModel):
             v = f"https://{v}"
         return v.rstrip("/")
 
+    @field_validator("device")
+    @classmethod
+    def validate_device(cls, v: str) -> str:
+        device = (v or "mobile").strip().lower()
+        if device not in {"mobile", "desktop"}:
+            raise ValueError("Device must be mobile or desktop")
+        return device
+
 
 class CoreWebVitalsReport(BaseModel):
+    device: str = "mobile"
     lcp: str
     cls: str
     fcp: str
@@ -25,6 +35,10 @@ class CoreWebVitalsReport(BaseModel):
     tbt: str
     performance_score: int
     performance_grade: str
+    accessibility_score: int
+    best_practices_score: int
+    seo_score: int
+    screenshot: Optional[str] = None  # base64 data URI
 
 
 class AISuggestions(BaseModel):
