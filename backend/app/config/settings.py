@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     # Ollama Local AI
     ollama_model: str = "qwen3:4b"
     ollama_host: str = "http://localhost:11434"
+    ollama_timeout: int = 25
 
     # App Config
     debug: bool = False
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
     api_version: str = "v1"
     api_timeout: int = 60
     pagespeed_timeout: int = 90
+    backend_port: int = 8010
 
     # CORS
     frontend_url: str = "http://localhost:5173"

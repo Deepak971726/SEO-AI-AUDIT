@@ -31,6 +31,12 @@ def format_cls(value: float | None) -> str:
 
 def setup_logger(name: str) -> logging.Logger:
     """Configure and return a named logger."""
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
+
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)

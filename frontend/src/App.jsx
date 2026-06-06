@@ -9,6 +9,7 @@ import PerformanceChart from './components/PerformanceChart.jsx'
 import AIInsightsPanel from './components/AIInsightsPanel.jsx'
 import FeaturesSection from './components/FeaturesSection.jsx'
 import Footer from './components/Footer.jsx'
+import SavageRoastPopup from './components/SavageRoastPopup.jsx'
 import { analyzeUrl } from './api/analyzeApi.js'
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   const [progress, setProgress] = useState(0)
   const [report, setReport] = useState(null)
   const [aiSuggestions, setAiSuggestions] = useState(null)
+  const [savageRoast, setSavageRoast] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -33,7 +35,6 @@ function App() {
   useEffect(() => {
     let interval
     if (isAnalyzing) {
-      setProgress(6)
       interval = setInterval(() => {
         setProgress(prev => {
           // Slow down near 90 so it never hits 100 before the API responds
@@ -61,15 +62,17 @@ function App() {
     // Update input to show the fixed URL
     setUrl(normalized)
     setIsAnalyzing(true)
-    setProgress(0)
+    setProgress(6)
     setError(null)
     setReport(null)
     setAiSuggestions(null)
+    setSavageRoast(null)
 
     try {
       const data = await analyzeUrl(normalized, activeDevice)
       setReport(data.report)
       setAiSuggestions(data.ai_suggestions)
+      setSavageRoast(data.savage_roast)
       setProgress(100)
     } catch (err) {
       // Handle pydantic 422 validation errors
@@ -119,22 +122,24 @@ function App() {
             progress={progress}
             error={error}
           />
-          <LighthouseDashboard report={report} analyzedUrl={report ? url : null} />
-          <MetricsDashboard report={report} />
+          <LighthouseDashboard report={report} analyzedUrl={report ? url : null} isAnalyzing={isAnalyzing} />
+          <MetricsDashboard report={report} isAnalyzing={isAnalyzing} />
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <AIInsightsPanel aiSuggestions={aiSuggestions} />
+            <AIInsightsPanel aiSuggestions={aiSuggestions} isAnalyzing={isAnalyzing} />
             <div className="space-y-6">
               <PerformanceScore
                 score={report?.performance_score ?? null}
                 grade={report?.performance_grade ?? null}
+                isAnalyzing={isAnalyzing}
               />
-              <PerformanceChart report={report} />
+              <PerformanceChart report={report} isAnalyzing={isAnalyzing} />
             </div>
           </div>
           <FeaturesSection />
           <Footer />
         </div>
       </main>
+      {savageRoast && <SavageRoastPopup roast={savageRoast} />}
     </div>
   )
 }

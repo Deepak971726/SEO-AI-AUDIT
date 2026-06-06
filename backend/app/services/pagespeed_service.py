@@ -119,6 +119,7 @@ def _parse_metrics(data: dict, strategy: str) -> dict:
     lcp = get_numeric("largest-contentful-paint")
     cls = get_numeric("cumulative-layout-shift")
     fcp = get_numeric("first-contentful-paint")
+    ttfb = get_numeric("server-response-time")
     speed_index = get_numeric("speed-index")
     tbt = get_numeric("total-blocking-time")
 
@@ -131,6 +132,7 @@ def _parse_metrics(data: dict, strategy: str) -> dict:
         "lcp": format_metric(lcp, unit="s"),
         "cls": format_cls(cls),
         "fcp": format_metric(fcp, unit="s"),
+        "ttfb": format_metric(ttfb),
         "speed_index": format_metric(speed_index, unit="s"),
         "tbt": format_metric(tbt),
         "performance_score": performance_score,
@@ -149,6 +151,7 @@ def _parse_metrics(data: dict, strategy: str) -> dict:
     logger.info(f"[PARSE METRICS]   - LCP: {metrics['lcp']}")
     logger.info(f"[PARSE METRICS]   - CLS: {metrics['cls']}")
     logger.info(f"[PARSE METRICS]   - FCP: {metrics['fcp']}")
+    logger.info(f"[PARSE METRICS]   - TTFB: {metrics['ttfb']}")
     logger.info(f"[PARSE METRICS]   - Speed Index: {metrics['speed_index']}")
     logger.info(f"[PARSE METRICS]   - TBT: {metrics['tbt']}")
     logger.info(f"[PARSE METRICS]   - Screenshot: {'✅ captured' if screenshot_data else '❌ not available'}")

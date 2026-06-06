@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl, field_validator
-from typing import Optional
+from typing import Literal, Optional
 
 
 class AnalyzeRequest(BaseModel):
@@ -31,6 +31,7 @@ class CoreWebVitalsReport(BaseModel):
     lcp: str
     cls: str
     fcp: str
+    ttfb: str
     speed_index: str
     tbt: str
     performance_score: int
@@ -50,11 +51,19 @@ class AISuggestions(BaseModel):
     image_optimization: list[str]
 
 
+class SavageRoast(BaseModel):
+    title: str
+    message: str
+    emoji: str
+    severity: Literal["low", "medium", "high"]
+
+
 class AnalyzeResponse(BaseModel):
     success: bool
     url: str
     report: CoreWebVitalsReport
     ai_suggestions: AISuggestions
+    savage_roast: SavageRoast
 
 
 class ErrorResponse(BaseModel):

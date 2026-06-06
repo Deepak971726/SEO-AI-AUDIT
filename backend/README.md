@@ -31,7 +31,7 @@ FRONTEND_URL=http://localhost:5173
 ### 4. Run the server
 ```bash
 # From the backend/ directory
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --app-dir . --reload --port 8010
 ```
 
 ---

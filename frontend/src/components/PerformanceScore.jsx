@@ -14,7 +14,37 @@ const GRADE_FOCUS = {
   Poor: 'Prioritize LCP, CLS, and TBT fixes.',
 }
 
-export default function PerformanceScore({ score, grade }) {
+function SkeletonScore() {
+  return (
+    <div className="panel-card p-6 animate-pulse">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-2">
+          <div className="h-3 w-32 rounded-full bg-(--panel)" />
+          <div className="h-6 w-48 rounded-full bg-(--panel)" />
+        </div>
+      </div>
+      <div className="mt-8 flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+        <div className="h-52 w-52 rounded-full bg-(--panel)" />
+        <div className="w-full space-y-4 sm:max-w-md">
+          <div className="rounded-lg border border-(--border) bg-(--panel) p-5 space-y-3">
+            <div className="h-3 w-16 rounded-full bg-(--panel-strong)" />
+            <div className="h-5 w-full rounded-full bg-(--panel-strong)" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[1,2,3,4].map(i => <div key={i} className="h-12 rounded-lg bg-(--panel)" />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function PerformanceScore({ score, grade, isAnalyzing }) {
+  // hide completely when nothing has happened yet
+  if (score === null && !isAnalyzing) return null
+
+  if (isAnalyzing && score === null) return <SkeletonScore />
+
   const circumference = 220
   const displayScore = score ?? 0
   const dashOffset = ((100 - displayScore) / 100) * circumference
@@ -40,9 +70,7 @@ export default function PerformanceScore({ score, grade }) {
           <svg viewBox="0 0 200 200" className="absolute h-full w-full -rotate-90">
             <circle cx="100" cy="100" r="35" fill="none" stroke="rgba(148,163,184,0.18)" strokeWidth="20" />
             <motion.circle
-              cx="100"
-              cy="100"
-              r="35"
+              cx="100" cy="100" r="35"
               fill="none"
               stroke="var(--accent)"
               strokeWidth="20"

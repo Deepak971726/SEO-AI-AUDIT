@@ -87,6 +87,7 @@ function ScoreRing({ label, score, delay = 0 }) {
 const METRIC_THRESHOLDS = {
   lcp: { good: 2.5, poor: 4, label: 'Largest Contentful Paint' },
   fcp: { good: 1.8, poor: 3, label: 'First Contentful Paint' },
+  ttfb: { good: 800, poor: 1800, label: 'Time to First Byte' },
   cls: { good: 0.1, poor: 0.25, label: 'Cumulative Layout Shift' },
   tbt: { good: 200, poor: 600, label: 'Total Blocking Time' },
   speed_index: { good: 3.4, poor: 5.8, label: 'Speed Index' },
@@ -201,31 +202,33 @@ function CompactScore({ score }) {
   )
 }
 
-export default function LighthouseDashboard({ report, analyzedUrl }) {
+export default function LighthouseDashboard({ report, analyzedUrl, isAnalyzing }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-  const reportDevice = report?.device ? `${report.device[0].toUpperCase()}${report.device.slice(1)}` : null
+
+  // ── IDLE: nothing analyzed yet — render nothing at all ──────────────────
+  if (!report && !isAnalyzing) return null
+
+  const reportDevice = report?.device
+    ? `${report.device[0].toUpperCase()}${report.device.slice(1)}`
+    : null
+
   const scores = [
-    { label: 'Performance', score: report?.performance_score ?? null, delay: 0 },
-    { label: 'Accessibility', score: report?.accessibility_score ?? null, delay: 0.05 },
+    { label: 'Performance',    score: report?.performance_score    ?? null, delay: 0 },
+    { label: 'Accessibility',  score: report?.accessibility_score  ?? null, delay: 0.05 },
     { label: 'Best Practices', score: report?.best_practices_score ?? null, delay: 0.1 },
-    { label: 'SEO', score: report?.seo_score ?? null, delay: 0.15 },
+    { label: 'SEO',            score: report?.seo_score            ?? null, delay: 0.15 },
   ]
 
-  const metricKeys = ['lcp', 'fcp', 'cls', 'tbt', 'speed_index']
-
-  useEffect(() => {
-    if (!isPreviewOpen) return undefined
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setIsPreviewOpen(false)
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPreviewOpen])
+  const metricKeys = ['lcp', 'fcp', 'ttfb', 'cls', 'tbt', 'speed_index']
 
   return (
-    <section className="space-y-4">
+    <motion.section
+      className="space-y-4"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">Lighthouse Report</p>
@@ -245,6 +248,7 @@ export default function LighthouseDashboard({ report, analyzedUrl }) {
         )}
       </div>
 
+      {/* ── score rings ── */}
       <div className="panel-card p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Category scores</p>
@@ -254,25 +258,51 @@ export default function LighthouseDashboard({ report, analyzedUrl }) {
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" />90-100</span>
           </div>
         </div>
-
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {report
-            ? scores.map(s => <ScoreRing key={s.label} {...s} />)
-            : [0, 1, 2, 3].map(i => <RingSkeleton key={i} />)}
+          {/* loading: show animated skeletons — data ready: show real rings */}
+          {isAnalyzing && !report
+            ? [0, 1, 2, 3].map(i => <RingSkeleton key={i} />)
+            : scores.map(s => <ScoreRing key={s.label} {...s} />)
+          }
         </div>
       </div>
 
+      {/* ── big score + screenshot ── */}
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+        {/* left — compact ring */}
         <div className="panel-card flex items-center p-5">
-          <CompactScore score={report?.performance_score ?? null} />
+          {isAnalyzing && !report
+            ? (
+              <div className="flex items-center gap-4 animate-pulse">
+                <div className="h-24 w-24 rounded-full bg-(--panel-strong)" />
+                <div className="space-y-3">
+                  <div className="h-4 w-28 rounded-full bg-(--panel-strong)" />
+                  <div className="h-3 w-20 rounded-full bg-(--panel-strong)" />
+                </div>
+              </div>
+            )
+            : <CompactScore score={report?.performance_score ?? null} />
+          }
         </div>
 
+        {/* right — screenshot */}
         <div className="panel-card flex min-h-0 flex-col gap-3 p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Website preview</p>
             {analyzedUrl && <p className="max-w-sm truncate text-xs text-muted">{analyzedUrl}</p>}
           </div>
-          {report?.screenshot ? (
+          {isAnalyzing && !report ? (
+            /* loading skeleton for screenshot */
+            <div className="flex h-52 items-center justify-center rounded-lg border border-(--border) bg-(--panel) sm:h-56 lg:h-60">
+              <div className="flex flex-col items-center gap-3">
+                <svg className="h-8 w-8 animate-spin text-cyan-400/50" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                <p className="text-xs text-muted">Capturing screenshot...</p>
+              </div>
+            </div>
+          ) : report?.screenshot ? (
             <motion.button
               type="button"
               onClick={() => setIsPreviewOpen(true)}
@@ -294,14 +324,13 @@ export default function LighthouseDashboard({ report, analyzedUrl }) {
             </motion.button>
           ) : (
             <div className="flex h-52 items-center justify-center rounded-lg border border-(--border) bg-(--panel) sm:h-56 lg:h-60">
-              {report
-                ? <p className="text-sm text-muted">Screenshot not available</p>
-                : <div className="h-full w-full animate-pulse rounded-lg bg-(--panel-strong)" />}
+              <p className="text-sm text-muted">Screenshot not available</p>
             </div>
           )}
         </div>
       </div>
 
+      {/* ── screenshot lightbox ── */}
       {report?.screenshot && isPreviewOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/88 p-4 backdrop-blur-sm"
@@ -334,33 +363,35 @@ export default function LighthouseDashboard({ report, analyzedUrl }) {
         </div>
       )}
 
+      {/* ── core web vitals table ── */}
       <div className="panel-card overflow-x-auto p-5">
         <div className="mb-4 flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Core Web Vitals</p>
           <span className="rounded-full border border-(--border) bg-(--panel) px-3 py-1 text-xs font-medium text-(--text)">
-            {report ? `Score: ${report.performance_score}/100` : 'Awaiting analysis'}
+            {report ? `Score: ${report.performance_score}/100` : 'Analyzing...'}
           </span>
         </div>
-
         <div className="min-w-[720px]">
           <div className="grid grid-cols-[1.7fr_0.8fr_1.4fr_1fr] gap-4 border-b border-(--border) pb-2">
             {['Metric', 'Value', 'Range', 'Status'].map(h => (
               <span key={h} className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{h}</span>
             ))}
           </div>
-
-          {report
-            ? metricKeys.map((key, i) => <MetricRow key={key} metricKey={key} value={report[key]} index={i} />)
-            : metricKeys.map((_, i) => (
+          {isAnalyzing && !report
+            ? metricKeys.map((_, i) => (
                 <div key={i} className="grid grid-cols-[1.7fr_0.8fr_1.4fr_1fr] gap-4 border-b border-(--border) py-3 last:border-0 animate-pulse">
                   <div className="h-3 w-40 rounded-full bg-(--panel-strong)" />
                   <div className="h-3 w-12 rounded-full bg-(--panel-strong)" />
                   <div className="h-2 w-full rounded-full bg-(--panel-strong)" />
                   <div className="h-3 w-16 justify-self-end rounded-full bg-(--panel-strong)" />
                 </div>
-              ))}
+              ))
+            : metricKeys.map((key, i) => (
+                <MetricRow key={key} metricKey={key} value={report[key]} index={i} />
+              ))
+          }
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }

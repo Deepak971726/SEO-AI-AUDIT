@@ -23,9 +23,9 @@ def _check_ollama() -> None:
     # Step 1 — ping Ollama server
     try:
         models_response = ollama.list()
-        logger.info("✅ Ollama server is RUNNING at %s", settings.ollama_host)
+        logger.info("Ollama server is running at %s", settings.ollama_host)
     except Exception as e:
-        logger.error("❌ Ollama server is NOT running at %s", settings.ollama_host)
+        logger.error("Ollama server is not running at %s", settings.ollama_host)
         logger.error("   Error : %s", e)
         logger.error("   Fix   : Run  →  ollama serve")
         logger.info("=" * 60)
@@ -39,16 +39,16 @@ def _check_ollama() -> None:
         target = settings.ollama_model.split(":")[0]
 
         if target in available_base or settings.ollama_model in available:
-            logger.info("✅ Model '%s' is AVAILABLE and ready", settings.ollama_model)
+            logger.info("Model '%s' is available and ready", settings.ollama_model)
         else:
-            logger.warning("⚠️  Model '%s' is NOT pulled yet", settings.ollama_model)
+            logger.warning("Model '%s' is not pulled yet", settings.ollama_model)
             logger.warning("   Fix   : Run  →  ollama pull %s", settings.ollama_model)
             if available:
                 logger.info("   Available models on this machine: %s", ", ".join(available))
             else:
                 logger.info("   No models are pulled yet on this machine")
     except Exception as e:
-        logger.warning("⚠️  Could not verify model list: %s", e)
+        logger.warning("Could not verify model list: %s", e)
 
     logger.info("=" * 60)
 
@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Core Web Vitals AI Analyzer",
-    description="AI-powered performance analysis using Google PageSpeed Insights and Ollama llama3.",
-    version="1.0.0",
+    description="AI-powered performance analysis using Google PageSpeed Insights and Ollama.",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -74,7 +74,12 @@ app = FastAPI(
 # CORS — allow React dev server and production frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        settings.frontend_url,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -96,8 +101,9 @@ async def health_check():
 
     return {
         "status": "ok",
+        "service": "seo-ai-audit",
         "environment": settings.environment,
-        "version": "1.0.0",
+        "version": "1.1.0",
         "ollama": ollama_status,
         "model": settings.ollama_model,
     }
@@ -105,4 +111,8 @@ async def health_check():
 
 @app.get("/", tags=["Root"])
 async def root():
-    return {"message": "Core Web Vitals AI Analyzer API", "docs": "/docs"}
+    return {
+        "service": "seo-ai-audit",
+        "message": "Core Web Vitals AI Analyzer API",
+        "docs": "/docs",
+    }

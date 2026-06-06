@@ -36,7 +36,10 @@ function InsightBlock({ label, children }) {
   )
 }
 
-export default function AIInsightsPanel({ aiSuggestions }) {
+export default function AIInsightsPanel({ aiSuggestions, isAnalyzing }) {
+  // hide completely when nothing has happened yet
+  if (!aiSuggestions && !isAnalyzing) return null
+
   const s = aiSuggestions
 
   return (
@@ -52,8 +55,8 @@ export default function AIInsightsPanel({ aiSuggestions }) {
           </div>
           <div className="rounded-lg border border-(--border) bg-(--panel) p-4 text-sm text-(--text)">
             <p className="eyebrow">AI Status</p>
-            <p className="mt-3 text-2xl font-semibold text-(--text)">{s ? 'Ready' : '-'}</p>
-            <p className="mt-2 text-muted">{s ? 'Analysis complete.' : 'Run an analysis to see AI insights.'}</p>
+            <p className="mt-3 text-2xl font-semibold text-(--text)">{s ? 'Ready' : 'Working...'}</p>
+            <p className="mt-2 text-muted">{s ? 'Analysis complete.' : 'AI is generating insights...'}</p>
           </div>
         </div>
 
